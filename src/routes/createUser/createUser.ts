@@ -1,17 +1,23 @@
 import { FastifyInstance } from "fastify";
 import z from "zod";
 import { knex } from "../../db/database";
+import jwt from "jsonwebtoken";
+import { env } from "../../env";
+import { checkSessionJWT } from "../../middleware/check-session-jwt";
 
 
 export async function createUser(app: FastifyInstance) {
+
+
+    // Rota para criar um usuário
     app.post('/', async (request, reply) => {
 
         const createUserBodySchema = z.object({
             name: z.string(),
             email: z.string().email(),
-            session_id: z.string().optional(),
+            sessionId: z.string().optional(),
         });
-        const { name, email, session_id } = createUserBodySchema.parse(request.body);
+        const { name, email } = createUserBodySchema.parse(request.body);
 
         const emailExists = await knex('user').where({ email }).first();
         if (emailExists) {
@@ -19,12 +25,37 @@ export async function createUser(app: FastifyInstance) {
             return;
         }
 
-        const user = await knex('user').insert({
+        let sessionId = crypto.randomUUID();
+
+        function generateToken() {
+            return jwt.sign({ sessionId }, env.JWT_SECRET, { expiresIn: '1h' });
+        }
+
+        await knex('user').insert({
             id: crypto.randomUUID(),
             name,
             email,
-            session_id
+            session_id: sessionId,
         });
-        reply.status(201).send();
+        const token = generateToken();
+        reply.status(201).send({ token });
+    });
+
+    // Rota para autenticar o usuário
+    app.get('/', { preHandler: [checkSessionJWT] }, async (request, reply) => {
+
+        const sessionId = request.headers.authorization?.split(" ")[1];
+
+        const sessionIddecoded = jwt.decode(sessionId as string);
+
+        const users = await knex('user')
+            .select('id', 'name', 'email')
+            .where({ session_id: (sessionIddecoded as jwt.JwtPayload).sessionId });
+        if (!users) {
+            reply.status(404).send({ message: 'Usuário não encontrado' });
+            return;
+        }
+
+        reply.status(200).send({ message: 'Usuário autenticado com sucesso', user: users[0] });
     });
 }

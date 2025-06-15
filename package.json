@@ -17,6 +17,7 @@
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^22.15.29",
     "@types/supertest": "^6.0.3",
     "@types/uuid": "^10.0.0",
@@ -30,6 +31,7 @@
     "@fastify/cookie": "^11.0.2",
     "dotenv": "^16.5.0",
     "fastify": "^5.3.3",
+    "jsonwebtoken": "^9.0.2",
     "knex": "^3.1.0",
     "mysql2": "^3.14.1",
     "pg": "^8.16.0",

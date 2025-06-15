@@ -18,7 +18,7 @@ export const envSchema = z.object({
     USER: z.string().default("root"),
     DATABASE_CLIENT: z.enum(["mysql2", "pg"]).default("mysql2"),
     //DATABASE_URL: z.string().url().optional(),
-    //JWT_SECRET: z.string().min(32).max(1024).default("default_jwt_secret"),
+    JWT_SECRET: z.string(),
 });
 
 const _env = envSchema.safeParse(process.env);
