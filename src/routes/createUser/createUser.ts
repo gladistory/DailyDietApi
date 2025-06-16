@@ -38,7 +38,8 @@ export async function createUser(app: FastifyInstance) {
             session_id: sessionId,
         });
         const token = generateToken();
-        reply.status(201).send({ token });
+        reply.header('authorization', `Bearer ${token}`);
+        return reply.status(201).send({ message: 'Usuário criado com sucesso', sessionId });
     });
 
     // Rota para autenticar o usuário
@@ -48,14 +49,14 @@ export async function createUser(app: FastifyInstance) {
 
         const sessionIddecoded = jwt.decode(sessionId as string);
 
-        const users = await knex('user')
+        const user = await knex('user')
             .select('id', 'name', 'email')
             .where({ session_id: (sessionIddecoded as jwt.JwtPayload).sessionId });
-        if (!users) {
+        if (!user || user.length === 0) {
             reply.status(404).send({ message: 'Usuário não encontrado' });
             return;
         }
 
-        reply.status(200).send({ message: 'Usuário autenticado com sucesso', user: users[0] });
+        reply.status(200).send({ message: 'Usuário autenticado com sucesso', user: user[0] });
     });
 }
