@@ -21,12 +21,13 @@ export async function createUser(app: FastifyInstance) {
         const { name, email } = createUserBodySchema.parse(request.body);
 
         const emailExists = await knex('user').where({ email }).first();
+
         if (emailExists) {
             reply.status(409).send({ message: 'Esse email já está em uso.' });
             return;
         }
-        else {
 
+        else {
             await knex('user').insert({
                 id: crypto.randomUUID(),
                 name: name,
@@ -81,6 +82,7 @@ export async function createUser(app: FastifyInstance) {
         }
     });
 
+    // Rota Para pegar dados do usuário logado
     app.get('/', { preHandler: checkSessionId }, async (request, reply) => {
 
         const sessionId = request.cookies.sessionId;
@@ -92,18 +94,28 @@ export async function createUser(app: FastifyInstance) {
         if (sessionId === undefined || !userSession) {
             return reply.status(404).send({ message: 'Sessão não encontrada.' });
         }
+
         return reply.status(200).send({
             message: 'Sessão válida.',
             user: {
                 id: userSession.id,
                 name: userSession.name,
                 email: userSession.email,
-            }
+            },
+            sessionId: sessionId
         });
-
-
     });
 
+    // Rota para logout do usuário
+    app.post('/logout', { preHandler: checkSessionId }, async (request, reply) => {
 
+        try {
+            reply.clearCookie('sessionId');
+        }
+        catch (error) {
+            return reply.status(500).send({ message: 'Erro ao deslogar usuário.' });
+        }
+        return reply.status(200).send({ message: 'Usuário deslogado com sucesso.' });
+    });
 
 }

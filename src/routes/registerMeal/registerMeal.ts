@@ -1,13 +1,11 @@
 import { FastifyInstance } from "fastify";
 import z from "zod";
 import { knex } from "../../db/database";
-import jwt from "jsonwebtoken";
-import { env } from "../../env";
 import { checkSessionId } from "../../middleware/check-session";
 
 export async function registerMeal(app: FastifyInstance) {
 
-    app.post('/', async (request, reply) => {
+    app.post('/', { preHandler: checkSessionId }, async (request, reply) => {
         const registerMealBodySchema = z.object({
             name: z.string(),
             session_user: z.string().optional(),
@@ -17,17 +15,20 @@ export async function registerMeal(app: FastifyInstance) {
 
         const { name, description, diet } = registerMealBodySchema.parse(request.body);
 
+        try {
+            await knex('meals').insert({
+                id: crypto.randomUUID(),
+                session_user: request.headers.authorization?.split(" ")[1] || undefined,
+                name,
+                description,
+                diet: diet || false,
+            });
 
-
-        await knex('meals').insert({
-            id: crypto.randomUUID(),
-            session_user: request.headers.authorization?.split(" ")[1] || undefined,
-            name,
-            description,
-            diet: diet || false,
-        });
-
-        return reply.status(201).send({ message: 'Meal registered successfully' });
+            return reply.status(201).send({ message: 'Refeição resgistrada com sucesso!' });
+        }
+        catch (error) {
+            return reply.status(500).send({ message: 'Erro ao registrar refeição.' });
+        }
 
     });
 
