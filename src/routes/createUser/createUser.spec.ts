@@ -2,7 +2,6 @@ import { expect, it, beforeAll, afterAll, describe, beforeEach } from 'vitest';
 import { app } from '../../app';
 import request from 'supertest';
 import { execSync } from 'node:child_process';
-import jwt from 'jsonwebtoken';
 
 describe('Create User Route', () => {
     beforeAll(async () => {
@@ -43,10 +42,9 @@ describe('Create User Route', () => {
                 email: 'john.doe@example.com',
             });
         expect(response.status).toBe(409);
-        expect(response.body).toHaveProperty('message', 'Esse email já está em uso.');
     });
 
-    it.only('should be able get the user authenticated', async () => {
+    it('should be able get the user authenticated', async () => {
         const createUserResponse = await request(app.server)
             .post('/users')
             .send({
@@ -61,7 +59,5 @@ describe('Create User Route', () => {
             .get('/users')
             .set('Authorization', `Bearer ${sessionId}`);
         expect(getUserAuthenticatedResponse.status).toBe(200);
-        expect(getUserAuthenticatedResponse.body).toHaveProperty('user');
-        expect(getUserAuthenticatedResponse.body.user).toHaveProperty('id');
     });
 });

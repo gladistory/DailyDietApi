@@ -1,21 +1,22 @@
 import { FastifyInstance } from "fastify";
 import z from "zod";
 import { knex } from "../../db/database";
-import jwt from "jsonwebtoken";
-import { env } from "../../env";
-import { checkSessionJWT } from "../../middleware/check-session-jwt";
+import { checkSessionId } from "../../middleware/check-session";
+import fastifyCookie from "@fastify/cookie";
+import { prependListener } from "process";
 
 
 export async function createUser(app: FastifyInstance) {
 
+    await app.register(fastifyCookie);
 
     // Rota para criar um usuário
-    app.post('/', async (request, reply) => {
+    app.post('/register', async (request, reply) => {
 
         const createUserBodySchema = z.object({
             name: z.string(),
             email: z.string().email(),
-            sessionId: z.string().optional(),
+            sessionId: z.string().uuid().optional(),
         });
         const { name, email } = createUserBodySchema.parse(request.body);
 
@@ -24,39 +25,85 @@ export async function createUser(app: FastifyInstance) {
             reply.status(409).send({ message: 'Esse email já está em uso.' });
             return;
         }
+        else {
 
-        let sessionId = crypto.randomUUID();
-
-        function generateToken() {
-            return jwt.sign({ sessionId }, env.JWT_SECRET, { expiresIn: '1h' });
+            await knex('user').insert({
+                id: crypto.randomUUID(),
+                name: name,
+                email: email,
+            });
+            return reply.status(201).send({
+                message: 'Usuário criado com sucesso.'
+            });
         }
 
-        await knex('user').insert({
-            id: crypto.randomUUID(),
-            name,
-            email,
-            session_id: sessionId,
-        });
-        const token = generateToken();
-        reply.header('authorization', `Bearer ${token}`);
-        return reply.status(201).send({ message: 'Usuário criado com sucesso', sessionId });
     });
 
-    // Rota para autenticar o usuário
-    app.get('/', { preHandler: [checkSessionJWT] }, async (request, reply) => {
+    // Rota para login do usuário
+    app.post('/login', async (request, reply) => {
 
-        const sessionId = request.headers.authorization?.split(" ")[1];
+        const loginUserBodySchema = z.object({
+            email: z.string().email(),
+        });
 
-        const sessionIddecoded = jwt.decode(sessionId as string);
+        const sessionId = crypto.randomUUID();
 
-        const user = await knex('user')
-            .select('id', 'name', 'email')
-            .where({ session_id: (sessionIddecoded as jwt.JwtPayload).sessionId });
-        if (!user || user.length === 0) {
-            reply.status(404).send({ message: 'Usuário não encontrado' });
+        reply.setCookie('sessionId', sessionId, {
+            path: '/',
+            httpOnly: true,
+            sameSite: true,
+            maxAge: 60 * 60 * 24 * 7
+        });
+
+        const { email } = loginUserBodySchema.parse(request.body);
+
+        const user = await knex('user').where({ email }).first();
+        if (!user) {
+            reply.status(404).send({ message: 'Usuário não encontrado.' });
             return;
         }
-
-        reply.status(200).send({ message: 'Usuário autenticado com sucesso', user: user[0] });
+        else {
+            await knex('auth').insert({
+                id: crypto.randomUUID(),
+                user_id: user.id,
+                session_id: sessionId,
+                created_at: new Date(),
+            });
+            reply.send({
+                message: 'Usuário logado com sucesso.',
+                user: {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                },
+                sessionId: sessionId
+            });
+        }
     });
+
+    app.get('/', { preHandler: checkSessionId }, async (request, reply) => {
+
+        const sessionId = request.cookies.sessionId;
+        const userSession = await knex('auth')
+            .join('user', 'auth.user_id', 'user.id')
+            .where('auth.session_id', sessionId)
+            .select('user.id', 'user.name', 'user.email')
+            .first();
+        if (sessionId === undefined || !userSession) {
+            return reply.status(404).send({ message: 'Sessão não encontrada.' });
+        }
+        return reply.status(200).send({
+            message: 'Sessão válida.',
+            user: {
+                id: userSession.id,
+                name: userSession.name,
+                email: userSession.email,
+            }
+        });
+
+
+    });
+
+
+
 }
