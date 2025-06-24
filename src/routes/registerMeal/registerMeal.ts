@@ -60,6 +60,28 @@ export async function registerMeal(app: FastifyInstance) {
         }
     });
 
+    app.get('/metrics', { preHandler: checkSessionId }, async (request, reply) => {
+
+        try {
+
+            const sessionId = request.cookies.sessionId;
+
+            const userId = await knex('auth').where({ session_id: sessionId }).first();
+
+            const meals = await knex('meals').where({ session_user: userId.user_id }).select('*');
+            return reply.status(200).send({
+                metrics: {
+                    totalMeals: meals.length,
+                    totalDietMeals: meals.filter(meal => meal.diet == true).length,
+                    totalNonDietMeals: meals.filter(meal => meal.diet == false).length,
+                }
+            });
+        }
+        catch (error) {
+            return reply.status(500).send({ message: 'Erro ao listar métricas.' });
+        }
+    });
+
     app.get('/:id', { preHandler: checkSessionId }, async (request, reply) => {
         const paramsSchema = z.object({
             id: z.string().uuid(),
