@@ -3,8 +3,6 @@ import z from "zod";
 import { knex } from "../../db/database";
 import { checkSessionId } from "../../middleware/check-session";
 import fastifyCookie from "@fastify/cookie";
-import { prependListener } from "process";
-
 
 export async function createUser(app: FastifyInstance) {
 
@@ -16,7 +14,6 @@ export async function createUser(app: FastifyInstance) {
         const createUserBodySchema = z.object({
             name: z.string(),
             email: z.string().email(),
-            sessionId: z.string().uuid().optional(),
         });
         const { name, email } = createUserBodySchema.parse(request.body);
 
@@ -27,17 +24,35 @@ export async function createUser(app: FastifyInstance) {
             return;
         }
 
-        else {
-            await knex('user').insert({
-                id: crypto.randomUUID(),
+        // Criação do usuário e sessão automática após registro
+        const userId = crypto.randomUUID();
+        const sessionId = crypto.randomUUID();
+        await knex('user').insert({
+            id: userId,
+            name: name,
+            email: email,
+        });
+        await knex('auth').insert({
+            id: crypto.randomUUID(),
+            user_id: userId,
+            session_id: sessionId,
+            created_at: new Date(),
+        });
+        reply.setCookie('sessionId', sessionId, {
+            path: '/',
+            httpOnly: true,
+            sameSite: true,
+            maxAge: 60 * 60 * 24 * 7
+        });
+        return reply.status(201).send({
+            message: 'Usuário criado e logado com sucesso.',
+            user: {
+                id: userId,
                 name: name,
                 email: email,
-            });
-            return reply.status(201).send({
-                message: 'Usuário criado com sucesso.'
-            });
-        }
-
+            },
+            sessionId: sessionId
+        });
     });
 
     // Rota para login do usuário

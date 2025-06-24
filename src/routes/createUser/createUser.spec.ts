@@ -2,7 +2,6 @@ import { expect, it, beforeAll, afterAll, describe, beforeEach } from 'vitest';
 import { app } from '../../app';
 import request from 'supertest';
 import { execSync } from 'node:child_process';
-import { resolve } from 'node:path';
 
 describe('Create User Route', () => {
     beforeAll(async () => {
