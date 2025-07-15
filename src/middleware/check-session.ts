@@ -7,7 +7,7 @@ export async function checkSessionId(
     reply: FastifyReply
 ) {
 
-    const sessionId = request.cookies.sessionId;
+    const sessionId = request.cookies.sessionId || request.headers['sessionid'];
 
     if (!sessionId || sessionId === '') {
         return reply.status(401).send({ mensagem: 'Sessão inválida, token não encontrado' });

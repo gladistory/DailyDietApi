@@ -87,11 +87,6 @@ export async function createUser(app: FastifyInstance) {
             });
             reply.send({
                 message: 'Usuário logado com sucesso.',
-                user: {
-                    id: user.id,
-                    name: user.name,
-                    email: user.email,
-                },
                 sessionId: sessionId
             });
         }

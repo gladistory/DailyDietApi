@@ -20,7 +20,7 @@ export async function registerMeal(app: FastifyInstance) {
 
         const { name, description, diet, data } = registerMealBodySchema.parse(request.body);
 
-        const sessionId = request.cookies.sessionId;
+        const sessionId = request.cookies.sessionId || request.headers['sessionid'];
 
         const userId = await knex('auth').where({ session_id: sessionId }).first();
 
@@ -47,7 +47,7 @@ export async function registerMeal(app: FastifyInstance) {
 
         try {
 
-            const sessionId = request.cookies.sessionId;
+            const sessionId = request.cookies.sessionId || request.headers['sessionid'];
 
             const userId = await knex('auth').where({ session_id: sessionId }).first();
 
@@ -64,7 +64,8 @@ export async function registerMeal(app: FastifyInstance) {
 
         try {
 
-            const sessionId = request.cookies.sessionId;
+            const sessionId = request.cookies.sessionId || request.headers['sessionid'];
+
 
             const userId = await knex('auth').where({ session_id: sessionId }).first();
 
@@ -163,4 +164,5 @@ export async function registerMeal(app: FastifyInstance) {
             return reply.status(500).send({ message: 'Erro ao deletar refeição.' });
         }
     });
+
 }
