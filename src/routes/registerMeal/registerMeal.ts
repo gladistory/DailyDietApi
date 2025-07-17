@@ -52,8 +52,12 @@ export async function registerMeal(app: FastifyInstance) {
             const userId = await knex('auth').where({ session_id: sessionId }).first();
 
             const meals = await knex('meals').where({ session_user: userId.user_id }).select('*');
-
-            return reply.status(200).send(meals);
+            // Converte diet para boolean
+            const mealsFormatted = meals.map(meal => ({
+                ...meal,
+                diet: Boolean(meal.diet)
+            }));
+            return reply.status(200).send(mealsFormatted);
         }
         catch (error) {
             return reply.status(500).send({ message: 'Erro ao listar refeições.' });
@@ -97,6 +101,8 @@ export async function registerMeal(app: FastifyInstance) {
                 return reply.status(404).send({ message: 'Refeição não encontrada.' });
             }
 
+            // Converte diet para boolean
+            meal.diet = Boolean(meal.diet);
             return reply.status(200).send(meal);
         }
         catch (error) {
