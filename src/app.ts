@@ -10,7 +10,8 @@ export const app = fastify();
 
 app.register(fastifyCors, {
     origin: true,
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 });
 
 app.register(createUser, { prefix: '/users' });

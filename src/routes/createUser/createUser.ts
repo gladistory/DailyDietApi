@@ -38,14 +38,8 @@ export async function createUser(app: FastifyInstance) {
             session_id: sessionId,
             created_at: new Date(),
         });
-        reply.setCookie('sessionId', sessionId, {
-            path: '/',
-            httpOnly: true,
-            sameSite: true,
-            maxAge: 60 * 60 * 24 * 7
-        });
-        return reply.status(201).send({
-            message: 'Usuário criado e logado com sucesso.',
+        reply.send({
+            message: 'Usuário criado com sucesso.',
             user: {
                 id: userId,
                 name: name,
@@ -63,13 +57,6 @@ export async function createUser(app: FastifyInstance) {
         });
 
         const sessionId = crypto.randomUUID();
-
-        reply.setCookie('sessionId', sessionId, {
-            path: '/',
-            httpOnly: true,
-            sameSite: true,
-            maxAge: 60 * 60 * 24 * 7
-        });
 
         const { email } = loginUserBodySchema.parse(request.body);
 
@@ -95,7 +82,7 @@ export async function createUser(app: FastifyInstance) {
     // Rota Para pegar dados do usuário logado
     app.get('/', { preHandler: checkSessionId }, async (request, reply) => {
 
-        const sessionId = request.cookies.sessionId;
+        const sessionId = request.headers['sessionid'];
         const userSession = await knex('auth')
             .join('user', 'auth.user_id', 'user.id')
             .where('auth.session_id', sessionId)
@@ -106,7 +93,6 @@ export async function createUser(app: FastifyInstance) {
         }
 
         return reply.status(200).send({
-            message: 'Sessão válida.',
             user: {
                 id: userSession.id,
                 name: userSession.name,

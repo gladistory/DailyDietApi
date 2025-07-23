@@ -20,7 +20,7 @@ export async function registerMeal(app: FastifyInstance) {
 
         const { name, description, diet, data } = registerMealBodySchema.parse(request.body);
 
-        const sessionId = request.cookies.sessionId || request.headers['sessionid'];
+        const sessionId = request.headers['sessionid'];
 
         const userId = await knex('auth').where({ session_id: sessionId }).first();
 
@@ -47,7 +47,7 @@ export async function registerMeal(app: FastifyInstance) {
 
         try {
 
-            const sessionId = request.cookies.sessionId || request.headers['sessionid'];
+            const sessionId = request.headers['sessionid'];
 
             const userId = await knex('auth').where({ session_id: sessionId }).first();
 
@@ -68,14 +68,18 @@ export async function registerMeal(app: FastifyInstance) {
 
         try {
 
-            const sessionId = request.cookies.sessionId || request.headers['sessionid'];
+            const sessionId = request.headers['sessionid'];
 
 
             const userId = await knex('auth').where({ session_id: sessionId }).first();
 
             const meals = await knex('meals').where({ session_user: userId.user_id }).select('*');
+            const porcentageDietMeals = meals.length > 0
+                ? Number(((meals.filter(meal => meal.diet == true).length / meals.length) * 100).toFixed(2))
+                : 0;
             return reply.status(200).send({
                 metrics: {
+                    porcentageDietMeals,
                     totalMeals: meals.length,
                     totalDietMeals: meals.filter(meal => meal.diet == true).length,
                     totalNonDietMeals: meals.filter(meal => meal.diet == false).length,
@@ -95,13 +99,16 @@ export async function registerMeal(app: FastifyInstance) {
         const { id } = paramsSchema.parse(request.params);
 
         try {
-            const meal = await knex('meals').where({ id }).first();
+
+            const sessionId = request.headers['sessionid'];
+            const userId = await knex('auth').where({ session_id: sessionId }).first();
+            
+            const meal = await knex('meals').where({ id, session_user: userId.user_id }).first();
 
             if (!meal) {
                 return reply.status(404).send({ message: 'Refeição não encontrada.' });
             }
-
-            // Converte diet para boolean
+            
             meal.diet = Boolean(meal.diet);
             return reply.status(200).send(meal);
         }
@@ -127,7 +134,10 @@ export async function registerMeal(app: FastifyInstance) {
         const { name, description, data, diet } = bodySchema.parse(request.body);
 
         try {
-            const meal = await knex('meals').where({ id }).first();
+            const sessionId = request.headers['sessionid'];
+            const userId = await knex('auth').where({ session_id: sessionId }).first();
+
+            const meal = await knex('meals').where({ id, session_user: userId.user_id }).first();
 
             if (!meal) {
                 return reply.status(404).send({ message: 'Refeição não encontrada.' });
@@ -156,7 +166,10 @@ export async function registerMeal(app: FastifyInstance) {
         const { id } = paramsSchema.parse(request.params);
 
         try {
-            const meal = await knex('meals').where({ id }).first();
+            const sessionId = request.headers['sessionid'];
+            const userId = await knex('auth').where({ session_id: sessionId }).first();
+
+            const meal = await knex('meals').where({ id, session_user: userId.user_id }).first();
 
             if (!meal) {
                 return reply.status(404).send({ message: 'Refeição não encontrada.' });
