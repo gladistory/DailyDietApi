@@ -15,14 +15,17 @@ export async function registerMeal(app: FastifyInstance) {
             name: z.string(),
             description: z.string().optional(),
             data: z.string().optional(),
+            hora: z.string().optional(),
             diet: z.boolean(),
         });
 
-        const { name, description, diet, data } = registerMealBodySchema.parse(request.body);
+        const { name, description, diet, data, hora } = registerMealBodySchema.parse(request.body);
 
         const sessionId = request.headers['sessionid'];
 
         const userId = await knex('auth').where({ session_id: sessionId }).first();
+
+        let formattedHora = hora ? `${hora.substring(0, 2)}:${hora.substring(2, 4)}` : undefined;
 
         try {
             await knex('meals').insert({
@@ -31,6 +34,7 @@ export async function registerMeal(app: FastifyInstance) {
                 name,
                 description,
                 data,
+                hora: formattedHora || new Date().toISOString(),
                 diet,
             });
 
@@ -127,11 +131,12 @@ export async function registerMeal(app: FastifyInstance) {
             name: z.string().optional(),
             description: z.string().optional(),
             data: z.string().optional(),
+            hora: z.string().optional(),
             diet: z.boolean().optional(),
         });
 
         const { id } = paramsSchema.parse(request.params);
-        const { name, description, data, diet } = bodySchema.parse(request.body);
+        const { name, description, data, hora, diet } = bodySchema.parse(request.body);
 
         try {
             const sessionId = request.headers['sessionid'];
@@ -147,6 +152,7 @@ export async function registerMeal(app: FastifyInstance) {
                 name,
                 description,
                 data,
+                hora,// Mantém a hora atual se não for fornecida
                 diet,
             });
 

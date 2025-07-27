@@ -17,6 +17,7 @@ declare module "knex/types/tables" {
             description?: string;
             diet?: boolean;
             data?: string;
+            hora?: string;
             session_user?: string;
             created_at: string;
         };
